@@ -1,0 +1,42 @@
+name: gh-pages deployment
+
+on:
+  push:
+    branches: main
+  workflow_dispatch:
+
+jobs:
+  ghpages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Set old branch name with dates
+        run: echo "BRANCH=$(date +'gh-pages_%Y-%m-%d_%H.%M.%S')" >> $GITHUB_ENV
+      - name: Backup gh-pages
+        run: |
+          git fetch
+          git checkout gh-pages
+          git pull
+          git checkout -b $BRANCH
+          git push origin $BRANCH
+          git branch -d gh-pages
+          git checkout main
+          git checkout -b gh-pages
+      - name: install nmrium and create toc
+        run: |
+          npm i nmrium-cli --global
+          nmrium deleteJSONs
+          nmrium createExercisesTOC --keepIdCode --cleanJCAMP
+          nmrium deleteStructures
+          nmrium appendLinks
+      - name: push to gh-pages
+        run: |
+          git config --global user.email "info@nmrium.org"
+          git config --global user.name "NMRium"
+          git add .
+          git commit -m "Update gh-pages"
+          git push origin gh-pages --force
